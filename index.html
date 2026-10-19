@@ -742,7 +742,10 @@ function go(id){
 }
 document.querySelectorAll('[data-go]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();go(a.dataset.go);}));
 window.addEventListener('hashchange',()=>go(location.hash.slice(1)));
+if('scrollRestoration' in history)history.scrollRestoration='manual';
 go(location.hash.slice(1)||'inicio');
+window.addEventListener('load',()=>window.scrollTo(0,0));
+window.addEventListener('pageshow',()=>window.scrollTo(0,0));
 
 const burger=document.getElementById('burger');
 burger.addEventListener('click',()=>{const t=document.getElementById('tabs');const o=t.classList.toggle('open');burger.setAttribute('aria-expanded',o?'true':'false');});
