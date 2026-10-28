@@ -17,11 +17,12 @@ SITE = {
 }
 
 # Ordem = ordem de exibição. "cover" é o produto cuja foto representa a ocasião.
+# "short" é o rótulo curto usado nos cartões da página inicial.
 OCCASIONS = [
     {"id": "natal", "label": "Natal", "cover": "guardanapo"},
     {"id": "formatura", "label": "Formatura", "cover": "capelo"},
-    {"id": "festas", "label": "Festas e brindes", "cover": "taca"},
-    {"id": "infantil", "label": "Infantil e Montessori", "cover": "balao"},
+    {"id": "festas", "label": "Festas e brindes", "short": "Festas", "cover": "taca"},
+    {"id": "infantil", "label": "Infantil e Montessori", "short": "Infantil", "cover": "balao"},
     {"id": "dia-dos-pais", "label": "Dia dos Pais", "cover": "retrato"},
     {"id": "halloween", "label": "Halloween", "cover": "abobora"},
     {"id": "chaveiros", "label": "Chaveiros", "cover": "gatinho"},
@@ -92,7 +93,7 @@ PRODUCTS = [
         "name": "Kit 5 Números Comemorativos para Mesa", "price": None, "kit": 5,
         "occasions": ["festas"],
         "short": "Números decorativos para aniversários e bodas.",
-        "desc": "Números decorativos para enfeitar a mesa de aniversários e bodas — 20, 30, 40 anos e mais. "
+        "desc": "Números decorativos para enfeitar a mesa de aniversários e bodas: 20, 30, 40 anos e mais. "
                 "Uma forma elegante de celebrar a idade ou os anos de história juntos. "
                 "Consulte números e cores disponíveis pelo WhatsApp.",
     },
@@ -109,8 +110,8 @@ PRODUCTS = [
         "name": "Kit 5 Porta-Copos Teia de Aranha", "price": 23.90, "kit": 5,
         "occasions": ["halloween"],
         "short": "Porta-copos temáticos para a mesa de Halloween.",
-        "desc": "Porta-copos em formato de teia de aranha para deixar a mesa de Halloween temática — "
-                "e divertidos no dia a dia também.",
+        "desc": "Porta-copos em formato de teia de aranha para deixar a mesa de Halloween temática. "
+                "Divertidos no dia a dia também.",
     },
     {
         "id": "gatinho", "slug": "chaveiro-gatinho-preto",
@@ -118,7 +119,7 @@ PRODUCTS = [
         "occasions": ["chaveiros"],
         "short": "Gatinho preto de orelhinhas rosadas.",
         "desc": "Gatinho preto de orelhinhas rosadas para acompanhar suas chaves, a mochila ou a bolsa. "
-                "Um mimo fofo para presentear — ou para se dar de presente.",
+                "Um mimo fofo para presentear ou para se dar de presente.",
     },
     {
         "id": "letra", "slug": "chaveiro-letra-personalizada-pai",
@@ -170,8 +171,10 @@ PRODUCTS = [
     },
 ]
 
-FEATURED = ["letreiro", "taca", "capelo", "balao", "retrato", "guardanapo"]
-HERO = ["taca", "balao", "gatinho"]
+# Destaques evitam repetir as fotos de capa das ocasiões.
+FEATURED = ["letreiro", "hama", "gatinho", "elefante", "galaxia", "sorter", "letra", "teia"]
+# Cada lista é um espaço da colagem do topo; as fotos se alternam sozinhas.
+HERO = [["taca", "letreiro", "hama"], ["balao", "abobora", "retrato"], ["gatinho", "capelo", "guardanapo"]]
 
 FAQ = [
     ("Como faço para comprar?",

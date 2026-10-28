@@ -40,6 +40,19 @@
     fromHash();
   }
 
+  const slots = [...document.querySelectorAll("[data-rotate]")];
+  if (slots.length && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    let turn = 0;
+    setInterval(() => {
+      if (document.hidden) return;
+      const imgs = [...slots[turn % slots.length].querySelectorAll("img")];
+      const i = imgs.findIndex((el) => el.classList.contains("is-on"));
+      const next = imgs[(i + 1) % imgs.length];
+      if (next.complete) { imgs[i].classList.remove("is-on"); next.classList.add("is-on"); }
+      turn++;
+    }, 2200);
+  }
+
   const bar = document.querySelector("[data-buybar]");
   const anchor = document.querySelector("[data-buy-anchor]");
   if (bar && anchor && "IntersectionObserver" in window) {

@@ -98,27 +98,34 @@ def edge_band(gray, side):
     return n
 
 
-def trim_letterbox(im):
-    """Remove tarjas lisas (brancas ou pretas) acima/abaixo da foto; fotos de estúdio com fundo branco ficam como estão."""
+def letterbox_box(im):
+    """Caixa sem as tarjas lisas (brancas ou pretas) acima/abaixo da foto; fotos de estúdio com fundo branco ficam inteiras."""
     g = im.convert("L")
     t, b, l, r = (edge_band(g, s) for s in "tblr")
     if l or r or t + b < 30:
-        return im
-    return im.crop((0, t, im.width, im.height - b))
+        return (0, 0, im.width, im.height)
+    return (0, t, im.width, im.height - b)
 
 
 def build_product_images():
     for p in PRODUCTS:
         src = next(SRC.glob(f"img/produtos/{p['id']}.*"))
         im = ImageOps.exif_transpose(Image.open(src)).convert("RGB")
-        im = trim_letterbox(im)
+        box = letterbox_box(im)
+        # Versão ampliada (EDSR x2) das fotos pequenas, gerada uma vez em img/produtos-hd/.
+        hd = SRC / f"img/produtos-hd/{p['id']}.jpg"
+        if hd.exists():
+            big = Image.open(hd).convert("RGB")
+            k = big.width / im.width
+            im, box = big, tuple(round(v * k) for v in box)
+        im = im.crop(box)
         side = min(min(im.size), 900)
         sq = ImageOps.fit(im, (side, side), Image.LANCZOS, centering=p.get("focus", (0.5, 0.5)))
         widths = [360] + ([600] if side >= 700 else []) + [side]
         base = f"assets/img/produtos/{p['slug']}"
         for w in widths:
             out = sq if w == side else sq.resize((w, w), Image.LANCZOS)
-            save_webp(out, OUT / f"{base}-{w}.webp")
+            save_webp(out, OUT / f"{base}-{w}.webp", q=80 if w <= 360 else 86)
         og = sq.resize((630, 630), Image.LANCZOS)
         (OUT / "assets/img/og").mkdir(parents=True, exist_ok=True)
         og.save(OUT / f"assets/img/og/{p['slug']}.jpg", "JPEG", quality=86, optimize=True, progressive=True)
@@ -144,8 +151,7 @@ def build_brand_images():
     card = Image.open(SRC / "img/marca/cartao-obrigada.jpg").convert("RGB")
     for w in (720, 1200):
         save_webp(card.resize((w, round(w * card.height / card.width)), Image.LANCZOS), OUT / f"assets/img/marca/cartao-obrigada-{w}.webp")
-    qr = Image.open(SRC / "img/marca/qr-instagram.webp").convert("RGB")
-    save_webp(qr.resize((300, round(300 * qr.height / qr.width)), Image.LANCZOS), OUT / "assets/img/marca/qr-instagram.webp", q=90)
+    shutil.copy(SRC / "img/marca/qr-instagram.svg", OUT / "assets/img/marca/qr-instagram.svg")
 
     mark = Image.open(SRC / "img/marca/simbolo.png").convert("RGBA")
 
@@ -376,7 +382,7 @@ def ig_block(pre):
     <p class="lead">Lançamentos, ideias de presentes e peças novas. Siga {SITE['instagram_handle']}.</p>
     <a class="btn btn-primary ig-cta" href="{SITE['instagram']}" target="_blank" rel="noopener">{I['instagram']} Seguir {SITE['instagram_handle']}</a>
   </div>
-  <figure class="ig-qr"><img src="{pre}assets/img/marca/qr-instagram.webp" width="300" height="317" alt="QR code do Instagram {SITE['instagram_handle']}" loading="lazy" decoding="async"><figcaption>Aponte a câmera do celular</figcaption></figure>
+  <figure class="ig-qr"><span class="ig-qr-box"><img src="{pre}assets/img/marca/qr-instagram.svg" width="132" height="132" alt="QR code do Instagram {SITE['instagram_handle']}" loading="lazy" decoding="async"></span><figcaption>Aponte a câmera do celular</figcaption></figure>
 </div>"""
 
 
@@ -391,18 +397,22 @@ ORG_LD = {
 # ---------------------------------------------------------------- páginas
 def page_home():
     pre = ""
-    hero = "".join(f"<figure>{img(pid, pre, '(min-width: 960px) 300px, 50vw' if i else '(min-width: 960px) 340px, 55vw', eager=(i == 0))}</figure>"
-                   for i, pid in enumerate(HERO))
+    def slot(i, pids):
+        sizes = "(min-width: 960px) 340px, 55vw" if i == 0 else "(min-width: 960px) 260px, 42vw"
+        imgs = "".join(img(pid, pre, sizes, eager=(i == 0 and j == 0)) for j, pid in enumerate(pids))
+        imgs = imgs.replace("<img ", '<img class="is-on" ', 1)
+        return f"<figure data-rotate>{imgs}</figure>"
+    hero = "".join(slot(i, pids) for i, pids in enumerate(HERO))
     min_price = min(p["price"] for p in PRODUCTS if p["price"])
     occs = [f'<li><a class="occ" href="catalogo#{o["id"]}">{img(o["cover"], pre, "(min-width: 1100px) 180px, (min-width: 760px) 30vw, 46vw", alt="")}'
-            f'<span class="occ-label">{o["label"]} {I["arrow"]}</span></a></li>' for o in OCCASIONS[:6]]
+            f'<span class="occ-label"><span>{o.get("short", o["label"])}</span>{I["arrow"]}</span></a></li>' for o in OCCASIONS[:6]]
     featured = "".join(card(BY_ID[i], pre) for i in FEATURED)
     body = f"""<section class="hero">
   <div class="wrap hero-grid">
     <div>
       <p class="eyebrow">{I['spark']} Ateliê de impressão 3D</p>
       <h1>Lembrancinhas e presentes <em>personalizados</em> em 3D</h1>
-      <p class="lead">Peças criativas para festas, formaturas, datas especiais e o quarto das crianças — feitas sob encomenda e preparadas com carinho para você.</p>
+      <p class="lead">Peças criativas para festas, formaturas, datas especiais e o quarto das crianças. Feitas sob encomenda e preparadas com carinho para você.</p>
       <div class="hero-ctas">
         <a class="btn btn-primary" href="catalogo">Ver catálogo {I['arrow']}</a>
         <a class="btn btn-outline" href="{WA_CUSTOM}" target="_blank" rel="noopener"><span class="wa">{I['whatsapp']}</span> Pedir personalizado</a>
@@ -427,7 +437,7 @@ def page_home():
 <section class="section section--tint" aria-labelledby="t-destaques">
   <div class="wrap">
     <div class="section-head"><div><h2 id="t-destaques">Peças em destaque</h2><p>Algumas das nossas favoritas, prontas para encomendar.</p></div><a class="link-arrow" href="catalogo">Ver catálogo completo {I['arrow']}</a></div>
-    <ul class="grid">{featured}</ul>
+    <ul class="grid grid--4">{featured}</ul>
   </div>
 </section>
 
@@ -612,7 +622,7 @@ def page_custom():
   {crumbs([("Início", "./"), ("Personalizados", None)], pre)}
   <header class="page-head">
     <h1>Peças personalizadas em impressão 3D</h1>
-    <p class="lead">Nome, tema, cores e quantidade do seu jeito — para festas, presentes e datas especiais.</p>
+    <p class="lead">Nome, tema, cores e quantidade do seu jeito, para festas, presentes e datas especiais.</p>
   </header>
 </div>
 <section class="section" aria-labelledby="t-oque">
@@ -677,7 +687,7 @@ def page_about():
   <div class="wrap split">
     <figure class="split-media"><img src="assets/img/marca/cartao-obrigada-720.webp" srcset="assets/img/marca/cartao-obrigada-720.webp 720w, assets/img/marca/cartao-obrigada-1200.webp 1200w" sizes="(min-width: 900px) 540px, 100vw" width="1200" height="800" alt="Cartão de agradecimento da Bella W3D que acompanha os pedidos" fetchpriority="high" decoding="async"></figure>
     <div class="prose">
-      <p>Na Bella W3D, a impressão 3D vira presente. Criamos peças sob encomenda — de lembrancinhas de festa a brinquedos inspirados no método Montessori — pensadas para quem vai receber.</p>
+      <p>Na Bella W3D, a impressão 3D vira presente. Criamos peças sob encomenda, de lembrancinhas de festa a brinquedos inspirados no método Montessori, pensadas para quem vai receber.</p>
       <p>Cada pedido é preparado com atenção aos detalhes, embalado com cuidado e acompanha um cartãozinho de agradecimento. Vendemos pela Shopee, com compra protegida, e atendemos pelo WhatsApp para tirar dúvidas e combinar peças personalizadas.</p>
     </div>
   </div>
